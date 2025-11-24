@@ -424,13 +424,13 @@ def main():
         pdf.set_y(y_fields_start + 2.6)
 
         LEFT_ROW_H = 3.4
-        create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
+        create_checkbox_table(pdf, "1.      Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
-        create_checkbox_table(pdf, "2. Seguridad eléctrica", seguridad_electrica, x_pos=FIRST_COL_LEFT,
+        create_checkbox_table(pdf, "2.      Seguridad eléctrica", seguridad_electrica, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
-        create_checkbox_table(pdf, "3. Accesorios del equipo", accesorios_equipo, x_pos=FIRST_COL_LEFT,
+        create_checkbox_table(pdf, "3.      Accesorios del equipo", accesorios_equipo, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
         
@@ -439,7 +439,7 @@ def main():
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(col_total_w, 4.0, f"{TAB}4. Medición de potencias", border=1, ln=1, align="L", fill=True)
+        pdf.cell(col_total_w, 4.0, f"{TAB}4.        Medición de potencias", border=1, ln=1, align="L", fill=True)
         # Espacio adicional
         pdf.ln(2.0)
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y(), potencias_valores, indent_w=5.0)
