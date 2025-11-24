@@ -241,34 +241,34 @@ def main():
             respuestas.append((item, seleccion))
         return respuestas
 
-    chequeo_visual = checklist("1. Inspección y limpieza", [
-        "1.1. Inspección general",
-        "1.2. Limpieza de contactos",
-        "1.3. Limpieza de cabezal termo-inscriptor",
-        "1.4. Revisión del estado de los accesorios",
-        "1.5. Revisión del panel",
-        "1.6. Revisión del conexiones eléctricas"
+    chequeo_visual = checklist("1.      Inspección y limpieza", [
+        "1.1.           Inspección general",
+        "1.2.           Limpieza de contactos",
+        "1.3.           Limpieza de cabezal termo-inscriptor",
+        "1.4.           Revisión del estado de los accesorios",
+        "1.5.           Revisión del panel",
+        "1.6.           Revisión del conexiones eléctricas"
     ])
-    seguridad_electrica = checklist("2. Seguridad eléctrica", [
-        "2.1. Medición de corrientes de fuga normal condición",
-        "2.2. Medición de corrientes de fuga con neutro abierto"
+    seguridad_electrica = checklist("2.     Seguridad eléctrica", [
+        "2.1.           Medición de corrientes de fuga normal condición",
+        "2.2.           Medición de corrientes de fuga con neutro abierto"
     ])
-    accesorios_equipo = checklist("3. Accesorios del equipo", [
-        "3.1. Cable de poder",
-        "3.2. Cable paciente",
-        "3.3. Cable de interfaz",
-        "3.4. Cable de tierra fuente de poder",
-        "3.5. Palas desfibriladoras"
+    accesorios_equipo = checklist("3.       Accesorios del equipo", [
+        "3.1.           Cable de poder",
+        "3.2.           Cable paciente",
+        "3.3.           Cable de interfaz",
+        "3.4.           Cable de tierra fuente de poder",
+        "3.5.           Palas desfibriladoras"
     ])
 
-    st.subheader("4. Medición de potencias")
+    st.subheader("4.        Medición de potencias")
     potencias_valores = []
     energia_set = [5, 15, 20, 50, 75, 100, 200]
     for i, energia in enumerate(energia_set):
         valor_medido = st.text_input(f"Energía de ajuste: {energia} J", key=f"potencia_{i}")
         potencias_valores.append((f"{energia} J", valor_medido))
 
-    st.subheader("5. Instrumentos de análisis")
+    st.subheader("5.        Instrumentos de análisis")
     if 'analisis_equipos' not in st.session_state:
         st.session_state.analisis_equipos = [{}]
 
