@@ -188,10 +188,10 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Monitor/Desfibrilador")
 
-    # --- CAMPOS DE ENTRADA (ORDEN SOLICITADO) ---
+    # --- CAMPOS DE ENTRADA ---
     marca = st.text_input("Marca")
     modelo = st.text_input("Modelo")
-    ideq = st.text_input("IDEQ") # Casilla debajo de modelo
+    ideq = st.text_input("IDEQ")
     sn = st.text_input("Número de Serie")
     inventario = st.text_input("Número de Inventario")
     fecha = st.date_input("Fecha", value=datetime.date.today())
@@ -275,20 +275,18 @@ def main():
         pdf.add_page()
 
         page_w = pdf.w
-        COL_GAP = 6
-        FIRST_COL_LEFT = SIDE_MARGIN
         usable_w = page_w - 2 * SIDE_MARGIN
+        COL_GAP = 6
         col_total_w = (usable_w - COL_GAP) / 2.0
         COL_W = 12.0
         ITEM_W = max(62.0, col_total_w - 3 * COL_W)
+        FIRST_COL_LEFT = SIDE_MARGIN
         FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
         # ======= ENCABEZADO =======
-        logo_x, logo_y = 2, 2
+        logo_x, logo_y = SIDE_MARGIN, 2
         LOGO_W_MM = 60
-        sep = 4
-        title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
         
         try:
             with Image.open("logo_hrt_final.jpg") as im:
@@ -298,32 +296,32 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
+        # --- Título debajo del logo ---
         pdf.set_font("Arial", "B", 7)
         title_h = 5.0
-        title_x = logo_x + LOGO_W_MM + sep
-        # UBICACIÓN DEL TÍTULO E IDEQ AL TOPE DEL LOGO
-        title_y_top = 2 
-        cell_w = FIRST_TAB_RIGHT - title_x
+        title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
+        title_y = logo_y + logo_h + 1  # 1mm de espacio debajo del logo
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
-        pdf.set_xy(title_x, title_y_top); pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
+        pdf.set_xy(logo_x, title_y)
+        pdf.cell(LOGO_W_MM, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
-        # RECUADRO IDEQ - ALINEADO AL TOPE (y=2)
+        # --- IDEQ arriba a la derecha ---
         pdf.set_font("Arial", "B", 8)
         ideq_w = 30
         ideq_x = page_w - SIDE_MARGIN - ideq_w
-        pdf.set_xy(ideq_x, title_y_top)
+        pdf.set_xy(ideq_x, 2)
         pdf.cell(ideq_w, title_h, f"IDEQ: {ideq}", border=1, ln=1, align="C", fill=True)
 
-        header_bottom = max(logo_y + logo_h, title_y_top + title_h)
-        content_y_base = header_bottom + 2
+        content_y_base = max(title_y + title_h, 2 + title_h) + 2
         pdf.set_y(content_y_base)
 
-        # ======= CAMPOS IZQUIERDA =======
+        # ======= CAMPOS IZQUIERDA (Sin IDEQ redundante) =======
         line_h = 4.4
         label_w_common = 28.0
         y_fields_start = pdf.get_y()
         x_label = FIRST_COL_LEFT + 2
         x_value = FIRST_COL_LEFT + label_w_common + 2
+        
         def left_field(lbl, val):
             nonlocal y_fields_start
             pdf.set_font("Arial", "", 7.5)
@@ -333,7 +331,7 @@ def main():
         
         left_field("MARCA", marca)
         left_field("MODELO", modelo)
-        left_field("IDEQ", ideq)
+        # Se ha eliminado left_field("IDEQ", ideq) de aquí
         left_field("NÚMERO SERIE", sn)
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
@@ -341,7 +339,7 @@ def main():
         # Fecha
         date_col_w = 11.0
         x_date = FIRST_TAB_RIGHT - (date_col_w * 3)
-        y_date_position = y_fields_start - (6 * line_h) 
+        y_date_position = content_y_base
         pdf.set_xy(x_date - 15, y_date_position); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
