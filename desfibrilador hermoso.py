@@ -188,7 +188,7 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Monitor/Desfibrilador")
 
-    # --- CAMPOS DE ENTRADA (IDEQ DE LOS PRIMEROS) ---
+    # --- CAMPOS DE ENTRADA ---
     ideq = st.text_input("IDEQ")
     marca = st.text_input("Marca")
     modelo = st.text_input("Modelo")
@@ -296,28 +296,41 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
-        # --- Título debajo del logo (Proporcionado al texto) ---
-        pdf.set_font("Arial", "B", 7)
-        title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
-        title_box_w = pdf.get_string_width(title_text) + 10 # Margen interno
-        title_h = 5.0
-        title_y = logo_y + logo_h + 1
-        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
-        pdf.set_xy(logo_x, title_y)
-        pdf.cell(title_box_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
-
         # --- IDEQ arriba a la derecha ---
         pdf.set_font("Arial", "B", 8)
         ideq_w = 30
         ideq_x = page_w - SIDE_MARGIN - ideq_w
         pdf.set_xy(ideq_x, 2)
-        pdf.cell(ideq_w, title_h, f"IDEQ: {ideq}", border=1, ln=1, align="C", fill=True)
+        pdf.cell(ideq_w, 5.0, f"IDEQ: {ideq}", border=1, ln=1, align="C", fill=True)
 
-        content_y_base = max(title_y + title_h, 2 + title_h) + 2
+        # --- TÍTULO (A un lado del logo y arriba de la fecha) ---
+        pdf.set_font("Arial", "B", 7)
+        title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
+        title_box_w = pdf.get_string_width(title_text) + 10
+        title_x = logo_x + LOGO_W_MM + 10 # Posicionado a la derecha del logo
+        title_y = 2 # Alineado al tope superior como el logo
+        
+        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
+        pdf.set_xy(title_x, title_y)
+        pdf.cell(title_box_w, 5.0, title_text, border=1, ln=0, align="C", fill=True)
+
+        # --- FECHA (Debajo del título) ---
+        date_col_w = 11.0
+        x_date = title_x + (title_box_w / 2) - ((date_col_w * 3 + 15) / 2) # Centrado bajo el título
+        y_date = title_y + 7
+        line_h = 4.4
+        
+        pdf.set_xy(x_date, y_date); pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(15, line_h, "FECHA:", 0, 0, "L")
+        pdf.set_font("Arial", "", 7.5)
+        pdf.cell(date_col_w, line_h, f"{fecha.day:02d}", 1, 0, "C")
+        pdf.cell(date_col_w, line_h, f"{fecha.month:02d}", 1, 0, "C")
+        pdf.cell(date_col_w, line_h, f"{fecha.year:04d}", 1, 0, "C")
+
+        content_y_base = max(logo_y + logo_h, y_date + line_h) + 3
         pdf.set_y(content_y_base)
 
-        # ======= CAMPOS IZQUIERDA (Sin IDEQ redundante) =======
-        line_h = 4.4
+        # ======= CAMPOS IZQUIERDA =======
         label_w_common = 28.0
         y_fields_start = pdf.get_y()
         x_label = FIRST_COL_LEFT + 2
@@ -336,29 +349,20 @@ def main():
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
         
-        # Fecha
-        date_col_w = 11.0
-        x_date = FIRST_TAB_RIGHT - (date_col_w * 3)
-        y_date_position = content_y_base
-        pdf.set_xy(x_date - 15, y_date_position); pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
-        pdf.set_font("Arial", "", 7.5)
-        pdf.set_xy(x_date, y_date_position)
-        pdf.cell(date_col_w, line_h, f"{fecha.day:02d}", 1, 0, "C")
-        pdf.cell(date_col_w, line_h, f"{fecha.month:02d}", 1, 0, "C")
-        pdf.cell(date_col_w, line_h, f"{fecha.year:04d}", 1, 0, "C")
-        
         pdf.set_y(y_fields_start + 2.6)
 
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, FIRST_COL_LEFT, ITEM_W, COL_W)
         create_checkbox_table(pdf, "2. Seguridad eléctrica", seguridad_electrica, FIRST_COL_LEFT, ITEM_W, COL_W)
         create_checkbox_table(pdf, "3. Accesorios del equipo", accesorios_equipo, FIRST_COL_LEFT, ITEM_W, COL_W)
         
+        # --- 4. Medición de potencias ---
         pdf.set_x(FIRST_COL_LEFT); pdf.set_fill_color(230, 230, 230); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, "      4. Medición de potencias", border=1, ln=1, align="L", fill=True)
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y()+1, potencias_valores)
         
-        pdf.set_x(FIRST_COL_LEFT); pdf.cell(col_total_w, 4.0, "      5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
+        # --- 5. INSTRUMENTOS DE ANÁLISIS (En Negrita) ---
+        pdf.set_x(FIRST_COL_LEFT); pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(col_total_w, 4.0, "      5. INSTRUMENTOS DE ANÁLISIS", border=1, ln=1, align="L", fill=True)
         draw_analisis_columns(pdf, FIRST_COL_LEFT, pdf.get_y()+1, col_total_w, st.session_state.analisis_equipos)
         
         # Columna Derecha
@@ -368,26 +372,25 @@ def main():
         draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, 4.5, label_w=40)
         pdf.ln(2)
         
-        # Sección Técnico (Ajustada para que la firma no tape el nombre)
+        # Sección Técnico (Sin negrita en etiquetas)
         y_tecnico_start = pdf.get_y()
         pdf.set_x(SECOND_COL_LEFT); 
-        pdf.set_font("Arial", "B", 7.5)
+        pdf.set_font("Arial", "", 7.5)
         pdf.cell(0, 4.6, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 1)
         
         pdf.set_x(SECOND_COL_LEFT)
         pdf.cell(15, 4.6, "FIRMA: ", 0, 0)
         y_firma_t = pdf.get_y()
-        # Estampamos la firma al lado de "FIRMA:" y ligeramente más abajo para despejar el texto de arriba
         add_signature_inline(pdf, canvas_result_tecnico, pdf.get_x() + 2, y_firma_t + 1, 60, 15)
         
         pdf.set_y(y_firma_t + 17)
         pdf.set_x(SECOND_COL_LEFT); 
-        pdf.set_font("Arial", "B", 7.5)
+        pdf.set_font("Arial", "", 7.5)
         pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1)
         pdf.ln(2)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 15, "   Observaciones (uso interno)", observaciones_interno)
         
-        # Firmas finales
+        # Firmas finales (En Negrita)
         y_sig_final = pdf.get_y() + 5
         add_signature_inline(pdf, canvas_result_ingenieria, SECOND_COL_LEFT + 5, y_sig_final, 55, 15)
         add_signature_inline(pdf, canvas_result_clinico, SECOND_COL_LEFT + col_total_w - 60, y_sig_final, 55, 15)
@@ -395,7 +398,7 @@ def main():
         pdf.line(SECOND_COL_LEFT + 5, y_line, SECOND_COL_LEFT + 70, y_line)
         pdf.line(SECOND_COL_LEFT + col_total_w - 70, y_line, SECOND_COL_LEFT + col_total_w - 5, y_line)
         pdf.set_xy(SECOND_COL_LEFT + 5, y_line + 1)
-        pdf.set_font("Arial", "", 6.5)
+        pdf.set_font("Arial", "B", 6.5)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL INGENIERÍA CLÍNICA", 0, 'C')
         pdf.set_xy(SECOND_COL_LEFT + col_total_w - 70, y_line + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
