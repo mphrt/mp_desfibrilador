@@ -63,6 +63,7 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_centered(pdf_obj, canvas_result, line_x_start, line_w, y_top, max_w=50, max_h=15):
+    """Añade la firma centrada respecto a una línea de referencia"""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -71,16 +72,20 @@ def add_signature_centered(pdf_obj, canvas_result, line_x_start, line_w, y_top, 
         tmp_path = tmp_file.name
     try:
         img = Image.open(tmp_path)
+        # Calcular proporciones
         img_w = max_w
         img_h = (img.height / img.width) * img_w
         if img_h > max_h:
             img_h = max_h
             img_w = (img.width / img.height) * img_h
+        
+        # Calcular X para que el centro de img_w coincida con el centro de line_w
         center_x = line_x_start + (line_w / 2)
         final_x = center_x - (img_w / 2)
+        
         pdf_obj.image(tmp_path, x=final_x, y=y_top, w=img_w, h=img_h)
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Error al añadir imagen: {e}")
 
 def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=15):
     img_byte_arr = _crop_signature(canvas_result)
@@ -97,7 +102,7 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=15):
             img_h = h_mm
             img_w = (img.width / img.height) * img_h
         pdf_obj.image(tmp_path, x=x, y=y, w=img_w, h=img_h)
-    except Exception:
+    except Exception as e:
         pass
 
 def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w=36):
@@ -323,18 +328,12 @@ def main():
         pdf.set_xy(ideq_x, 4)
         pdf.cell(ideq_w, 4.5, ideq_text, border=1, ln=1, align="C", fill=True)
 
-        # FECHA - Definir posición antes para alinear la Pauta
-        date_col_w = 11.0
-        x_date_label = FIRST_TAB_RIGHT - (date_col_w * 3) - 15 # "FECHA:" + cuadros
-        
-        # Pauta Mantenimiento - Ajuste para acercarse a la fecha
+        # Pauta Mantenimiento
         pdf.set_font("Arial", "B", 7)
         title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
         title_x = logo_x + LOGO_W_MM + 4
-        # Se detiene 4mm antes del inicio de la palabra "FECHA"
-        title_box_w = (x_date_label - title_x) - 4 
+        title_box_w = (FIRST_TAB_RIGHT - title_x) 
         title_y = logo_y + logo_h - 5 
-        
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
         pdf.cell(title_box_w, 5.0, title_text, border=1, ln=1, align="C", fill=True)
@@ -362,12 +361,13 @@ def main():
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
         
-        # Dibujar Fecha físicamente
-        x_date_boxes = FIRST_TAB_RIGHT - (date_col_w * 3)
-        pdf.set_xy(x_date_boxes - 15, content_y_base); pdf.set_font("Arial", "B", 7.5)
+        # FECHA
+        date_col_w = 11.0
+        x_date = FIRST_TAB_RIGHT - (date_col_w * 3)
+        pdf.set_xy(x_date - 15, content_y_base); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
-        pdf.set_xy(x_date_boxes, content_y_base)
+        pdf.set_xy(x_date, content_y_base)
         pdf.cell(date_col_w, line_h, f"{fecha.day:02d}", 1, 0, "C")
         pdf.cell(date_col_w, line_h, f"{fecha.month:02d}", 1, 0, "C")
         pdf.cell(date_col_w, line_h, f"{fecha.year:04d}", 1, 0, "C")
@@ -411,17 +411,22 @@ def main():
         
         # ======= FIRMAS RECEPCIÓN CONFORME (CENTRADAS) =======
         y_sig_top = pdf.get_y() + 5
-        line_w_ref = 50  
+        line_w_ref = 50  # Longitud de la línea
+        
+        # Posiciones X de inicio de las líneas
         x_start_ingenieria = SECOND_COL_LEFT + 12
         x_start_clinico = SECOND_COL_LEFT + col_total_w - 62
         
+        # 1. Insertar Imágenes centradas respecto a las líneas
         add_signature_centered(pdf, canvas_result_ingenieria, x_start_ingenieria, line_w_ref, y_sig_top)
         add_signature_centered(pdf, canvas_result_clinico, x_start_clinico, line_w_ref, y_sig_top)
         
+        # 2. Dibujar Líneas
         y_line_final = y_sig_top + 18
         pdf.line(x_start_ingenieria, y_line_final, x_start_ingenieria + line_w_ref, y_line_final)
         pdf.line(x_start_clinico, y_line_final, x_start_clinico + line_w_ref, y_line_final)
         
+        # 3. Textos centrados
         pdf.set_font("Arial", "B", 6.5)
         pdf.set_xy(SECOND_COL_LEFT + 5, y_line_final + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL INGENIERÍA CLÍNICA", 0, 'C')
