@@ -188,10 +188,10 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Monitor/Desfibrilador")
 
-    # --- CAMPOS DE ENTRADA ---
+    # --- CAMPOS DE ENTRADA (IDEQ DE LOS PRIMEROS) ---
+    ideq = st.text_input("IDEQ")
     marca = st.text_input("Marca")
     modelo = st.text_input("Modelo")
-    ideq = st.text_input("IDEQ")
     sn = st.text_input("Número de Serie")
     inventario = st.text_input("Número de Inventario")
     fecha = st.date_input("Fecha", value=datetime.date.today())
@@ -296,14 +296,15 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
-        # --- Título debajo del logo ---
+        # --- Título debajo del logo (Proporcionado al texto) ---
         pdf.set_font("Arial", "B", 7)
-        title_h = 5.0
         title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
-        title_y = logo_y + logo_h + 1  # 1mm de espacio debajo del logo
+        title_box_w = pdf.get_string_width(title_text) + 10 # Margen interno
+        title_h = 5.0
+        title_y = logo_y + logo_h + 1
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(logo_x, title_y)
-        pdf.cell(LOGO_W_MM, title_h, title_text, border=1, ln=1, align="C", fill=True)
+        pdf.cell(title_box_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
         # --- IDEQ arriba a la derecha ---
         pdf.set_font("Arial", "B", 8)
@@ -331,7 +332,6 @@ def main():
         
         left_field("MARCA", marca)
         left_field("MODELO", modelo)
-        # Se ha eliminado left_field("IDEQ", ideq) de aquí
         left_field("NÚMERO SERIE", sn)
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
@@ -367,11 +367,23 @@ def main():
         pdf.ln(2)
         draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, 4.5, label_w=40)
         pdf.ln(2)
+        
+        # Sección Técnico (Ajustada para que la firma no tape el nombre)
+        y_tecnico_start = pdf.get_y()
+        pdf.set_x(SECOND_COL_LEFT); 
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(0, 4.6, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 1)
+        
+        pdf.set_x(SECOND_COL_LEFT)
+        pdf.cell(15, 4.6, "FIRMA: ", 0, 0)
         y_firma_t = pdf.get_y()
-        pdf.set_x(SECOND_COL_LEFT); pdf.cell(60, 4.6, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 0)
-        add_signature_inline(pdf, canvas_result_tecnico, pdf.get_x() + 15, y_firma_t, 60, 15)
+        # Estampamos la firma al lado de "FIRMA:" y ligeramente más abajo para despejar el texto de arriba
+        add_signature_inline(pdf, canvas_result_tecnico, pdf.get_x() + 2, y_firma_t + 1, 60, 15)
+        
         pdf.set_y(y_firma_t + 17)
-        pdf.set_x(SECOND_COL_LEFT); pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1)
+        pdf.set_x(SECOND_COL_LEFT); 
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1)
         pdf.ln(2)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 15, "   Observaciones (uso interno)", observaciones_interno)
         
@@ -383,6 +395,7 @@ def main():
         pdf.line(SECOND_COL_LEFT + 5, y_line, SECOND_COL_LEFT + 70, y_line)
         pdf.line(SECOND_COL_LEFT + col_total_w - 70, y_line, SECOND_COL_LEFT + col_total_w - 5, y_line)
         pdf.set_xy(SECOND_COL_LEFT + 5, y_line + 1)
+        pdf.set_font("Arial", "", 6.5)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL INGENIERÍA CLÍNICA", 0, 'C')
         pdf.set_xy(SECOND_COL_LEFT + col_total_w - 70, y_line + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
