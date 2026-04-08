@@ -184,11 +184,23 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         y_current = max(end_left, end_right) + 2
     return y_current
 
+def checklist(title, items):
+    st.subheader(title)
+    respuestas = []
+    for item in items:
+        with st.container():
+            col1, col2 = st.columns([5, 3])
+            with col1:
+                st.markdown(item)
+            with col2:
+                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
+        respuestas.append((item, seleccion))
+    return respuestas
+
 # ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Monitor/Desfibrilador")
 
-    # --- CAMPOS DE ENTRADA ---
     ideq = st.text_input("IDEQ")
     marca = st.text_input("Marca")
     modelo = st.text_input("Modelo")
@@ -197,7 +209,6 @@ def main():
     fecha = st.date_input("Fecha", value=datetime.date.today())
     ubicacion = st.text_input("Ubicación")
 
-    # ... (Resto de la lógica de checklists y potencias igual) ...
     chequeo_visual = checklist("1. Inspección y limpieza", [
         "1.1. Inspección general", "1.2. Limpieza de contactos", "1.3. Limpieza de cabezal termo-inscriptor",
         "1.4. Revisión del estado de los accesorios", "1.5. Revisión del panel", "1.6. Revisión del conexiones eléctricas"
@@ -272,7 +283,7 @@ def main():
         FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
-        # ======= ENCABEZADO =======
+        # ======= ENCABEZADO SUPERIOR (LOGO E IDEQ) =======
         logo_x, logo_y = SIDE_MARGIN, 2
         LOGO_W_MM = 60
         
@@ -284,29 +295,34 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
-        # --- IDEQ arriba a la derecha (SIN NEGRO) ---
+        # --- RECUADRO IDEQ (Estilo Pauta) ---
         pdf.set_font("Arial", "B", 8)
-        ideq_w = 30
+        ideq_w = 40
         ideq_x = page_w - SIDE_MARGIN - ideq_w
-        pdf.set_xy(ideq_x, 2)
-        pdf.cell(ideq_w, 5.0, f"IDEQ: {ideq}", border=1, ln=1, align="C", fill=False)
+        # Usamos el estilo del recuadro de pauta (fondo gris)
+        pdf.set_fill_color(230, 230, 230)
+        pdf.set_xy(ideq_x, 3)
+        pdf.cell(ideq_w, 5.0, "IDEQ", border=1, ln=1, align="C", fill=True)
+        pdf.set_xy(ideq_x, 8)
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(ideq_w, 6.0, f"{ideq}", border=1, ln=1, align="C", fill=False)
 
-        # --- TÍTULO (AL LADO DEL LOGO Y ARRIBA DE LA FECHA) ---
+        # --- RECUADRO PAUTA (AL LADO DEL LOGO ABAJO) ---
         pdf.set_font("Arial", "B", 7)
         title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
-        title_box_w = pdf.get_string_width(title_text) + 10
-        title_x = logo_x + LOGO_W_MM + 5 
-        title_y = 6 # Bajado un poco para que no pegue al borde superior
+        title_box_w = pdf.get_string_width(title_text) + 6
+        title_x = logo_x + LOGO_W_MM + 4 
+        title_y = logo_y + logo_h - 5 # Se posiciona al lado inferior del logo
         
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
         pdf.cell(title_box_w, 5.0, title_text, border=1, ln=1, align="C", fill=True)
 
-        # Base para el contenido
-        content_y_base = max(logo_y + logo_h, title_y + 10) + 3
+        # Ajuste base de contenido
+        content_y_base = max(logo_y + logo_h, title_y + 5) + 4
         pdf.set_y(content_y_base)
 
-        # ======= CAMPOS IZQUIERDA (MARCA, MODELO, ETC) =======
+        # ======= CAMPOS IZQUIERDA =======
         line_h = 4.4
         label_w_common = 28.0
         y_fields_start = pdf.get_y()
@@ -326,14 +342,13 @@ def main():
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
         
-        # --- FECHA (POSICIÓN ORIGINAL: EXTREMO DERECHO DE LA PRIMERA COLUMNA) ---
+        # --- FECHA ---
         date_col_w = 11.0
         x_date = FIRST_TAB_RIGHT - (date_col_w * 3)
-        y_date_position = content_y_base # Donde solía estar
-        pdf.set_xy(x_date - 15, y_date_position); pdf.set_font("Arial", "B", 7.5)
+        pdf.set_xy(x_date - 15, content_y_base); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
-        pdf.set_xy(x_date, y_date_position)
+        pdf.set_xy(x_date, content_y_base)
         pdf.cell(date_col_w, line_h, f"{fecha.day:02d}", 1, 0, "C")
         pdf.cell(date_col_w, line_h, f"{fecha.month:02d}", 1, 0, "C")
         pdf.cell(date_col_w, line_h, f"{fecha.year:04d}", 1, 0, "C")
@@ -349,7 +364,7 @@ def main():
         pdf.cell(col_total_w, 4.0, "      4. Medición de potencias", border=1, ln=1, align="L", fill=True)
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y()+1, potencias_valores)
         
-        # --- 5. Instrumentos de análisis (Minúsculas + Negrita) ---
+        # --- 5. Instrumentos de análisis ---
         pdf.set_x(FIRST_COL_LEFT); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, "      5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         draw_analisis_columns(pdf, FIRST_COL_LEFT, pdf.get_y()+1, col_total_w, st.session_state.analisis_equipos)
@@ -361,7 +376,7 @@ def main():
         draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, 4.5, label_w=40)
         pdf.ln(2)
         
-        # Sección Técnico (Sin negrita en etiquetas)
+        # Sección Técnico
         y_tecnico_start = pdf.get_y()
         pdf.set_x(SECOND_COL_LEFT); 
         pdf.set_font("Arial", "", 7.5)
@@ -379,7 +394,7 @@ def main():
         pdf.ln(2)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 15, "   Observaciones (uso interno)", observaciones_interno)
         
-        # Firmas finales (En Negrita)
+        # Firmas finales
         y_sig_final = pdf.get_y() + 5
         add_signature_inline(pdf, canvas_result_ingenieria, SECOND_COL_LEFT + 5, y_sig_final, 55, 15)
         add_signature_inline(pdf, canvas_result_clinico, SECOND_COL_LEFT + col_total_w - 60, y_sig_final, 55, 15)
@@ -397,19 +412,6 @@ def main():
         else: out = bytes(out)
 
         st.download_button("Descargar PDF", out, file_name=f"{ideq}_MP_Desfibrilador_{sn}.pdf", mime="application/pdf")
-
-def checklist(title, items):
-    st.subheader(title)
-    respuestas = []
-    for item in items:
-        with st.container():
-            col1, col2 = st.columns([5, 3])
-            with col1:
-                st.markdown(item)
-            with col2:
-                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
-        respuestas.append((item, seleccion))
-    return respuestas
 
 if __name__ == "__main__":
     main()
