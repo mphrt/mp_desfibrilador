@@ -295,20 +295,22 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
-        # --- RECUADRO IDEQ (Recuadro único con fondo gris) ---
+        # --- RECUADRO IDEQ (Pequeño, tamaño letra) ---
         pdf.set_font("Arial", "B", 8)
         ideq_text = f"IDEQ: {ideq}"
-        ideq_w = pdf.get_string_width(ideq_text) + 12
+        ideq_w = pdf.get_string_width(ideq_text) + 4 # Padding mínimo
         ideq_x = page_w - SIDE_MARGIN - ideq_w
         pdf.set_fill_color(230, 230, 230)
         pdf.set_xy(ideq_x, 4)
-        pdf.cell(ideq_w, 7.0, ideq_text, border=1, ln=1, align="C", fill=True)
+        pdf.cell(ideq_w, 4.5, ideq_text, border=1, ln=1, align="C", fill=True)
 
-        # --- RECUADRO PAUTA (AL LADO DEL LOGO ABAJO) ---
+        # --- RECUADRO PAUTA (Alineado con el final de la fecha) ---
         pdf.set_font("Arial", "B", 7)
         title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
-        title_box_w = pdf.get_string_width(title_text) + 6
-        title_x = logo_x + LOGO_W_MM + 4 
+        # Ajuste de anchura para que coincida con el final de la fecha (FIRST_TAB_RIGHT)
+        date_section_w = 33.0 # Ancho de los 3 cuadros de fecha (11*3)
+        title_x = logo_x + LOGO_W_MM + 4
+        title_box_w = (FIRST_TAB_RIGHT - title_x) # Se extiende hasta el final de la columna de fecha
         title_y = logo_y + logo_h - 5 
         
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -391,17 +393,19 @@ def main():
         add_signature_inline(pdf, canvas_result_clinico, SECOND_COL_LEFT + col_total_w - 60, y_sig_final, 55, 15)
         
         y_line = y_sig_final + 18
-        # Línea Izquierda (Ingeniería)
-        pdf.line(SECOND_COL_LEFT + 5, y_line, SECOND_COL_LEFT + 70, y_line)
-        # Línea Derecha (Clínico)
-        pdf.line(SECOND_COL_LEFT + col_total_w - 70, y_line, SECOND_COL_LEFT + col_total_w - 5, y_line)
+        
+        # Tamaño de línea ajustado al texto (aprox 50mm)
+        line_w_custom = 50 
+        
+        # Línea Izquierda
+        pdf.line(SECOND_COL_LEFT + 12, y_line, SECOND_COL_LEFT + 12 + line_w_custom, y_line)
+        # Línea Derecha
+        pdf.line(SECOND_COL_LEFT + col_total_w - 62, y_line, SECOND_COL_LEFT + col_total_w - 62 + line_w_custom, y_line)
         
         pdf.set_font("Arial", "B", 6.5)
-        # Texto Ingeniería centrado bajo su línea
         pdf.set_xy(SECOND_COL_LEFT + 5, y_line + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL INGENIERÍA CLÍNICA", 0, 'C')
         
-        # Texto Clínico centrado bajo su línea
         pdf.set_xy(SECOND_COL_LEFT + col_total_w - 70, y_line + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
 
