@@ -295,30 +295,26 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
-        # --- RECUADRO IDEQ (Estilo Pauta) ---
+        # --- RECUADRO IDEQ (Recuadro único con fondo gris) ---
         pdf.set_font("Arial", "B", 8)
-        ideq_w = 40
+        ideq_text = f"IDEQ: {ideq}"
+        ideq_w = pdf.get_string_width(ideq_text) + 12
         ideq_x = page_w - SIDE_MARGIN - ideq_w
-        # Usamos el estilo del recuadro de pauta (fondo gris)
         pdf.set_fill_color(230, 230, 230)
-        pdf.set_xy(ideq_x, 3)
-        pdf.cell(ideq_w, 5.0, "IDEQ", border=1, ln=1, align="C", fill=True)
-        pdf.set_xy(ideq_x, 8)
-        pdf.set_font("Arial", "", 8)
-        pdf.cell(ideq_w, 6.0, f"{ideq}", border=1, ln=1, align="C", fill=False)
+        pdf.set_xy(ideq_x, 4)
+        pdf.cell(ideq_w, 7.0, ideq_text, border=1, ln=1, align="C", fill=True)
 
         # --- RECUADRO PAUTA (AL LADO DEL LOGO ABAJO) ---
         pdf.set_font("Arial", "B", 7)
         title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
         title_box_w = pdf.get_string_width(title_text) + 6
         title_x = logo_x + LOGO_W_MM + 4 
-        title_y = logo_y + logo_h - 5 # Se posiciona al lado inferior del logo
+        title_y = logo_y + logo_h - 5 
         
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
         pdf.cell(title_box_w, 5.0, title_text, border=1, ln=1, align="C", fill=True)
 
-        # Ajuste base de contenido
         content_y_base = max(logo_y + logo_h, title_y + 5) + 4
         pdf.set_y(content_y_base)
 
@@ -359,25 +355,20 @@ def main():
         create_checkbox_table(pdf, "2. Seguridad eléctrica", seguridad_electrica, FIRST_COL_LEFT, ITEM_W, COL_W)
         create_checkbox_table(pdf, "3. Accesorios del equipo", accesorios_equipo, FIRST_COL_LEFT, ITEM_W, COL_W)
         
-        # --- 4. Medición de potencias ---
         pdf.set_x(FIRST_COL_LEFT); pdf.set_fill_color(230, 230, 230); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, "      4. Medición de potencias", border=1, ln=1, align="L", fill=True)
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y()+1, potencias_valores)
         
-        # --- 5. Instrumentos de análisis ---
         pdf.set_x(FIRST_COL_LEFT); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, "      5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         draw_analisis_columns(pdf, FIRST_COL_LEFT, pdf.get_y()+1, col_total_w, st.session_state.analisis_equipos)
         
-        # Columna Derecha
         pdf.set_y(content_y_base)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 15, "   Observaciones", observaciones)
         pdf.ln(2)
         draw_si_no_boxes(pdf, SECOND_COL_LEFT, pdf.get_y(), operativo, 4.5, label_w=40)
         pdf.ln(2)
         
-        # Sección Técnico
-        y_tecnico_start = pdf.get_y()
         pdf.set_x(SECOND_COL_LEFT); 
         pdf.set_font("Arial", "", 7.5)
         pdf.cell(0, 4.6, f"NOMBRE TÉCNICO/INGENIERO: {tecnico}", 0, 1)
@@ -394,16 +385,23 @@ def main():
         pdf.ln(2)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 15, "   Observaciones (uso interno)", observaciones_interno)
         
-        # Firmas finales
+        # ======= FIRMAS FINALES (RECEPCIÓN CONFORME) =======
         y_sig_final = pdf.get_y() + 5
         add_signature_inline(pdf, canvas_result_ingenieria, SECOND_COL_LEFT + 5, y_sig_final, 55, 15)
         add_signature_inline(pdf, canvas_result_clinico, SECOND_COL_LEFT + col_total_w - 60, y_sig_final, 55, 15)
+        
         y_line = y_sig_final + 18
+        # Línea Izquierda (Ingeniería)
         pdf.line(SECOND_COL_LEFT + 5, y_line, SECOND_COL_LEFT + 70, y_line)
+        # Línea Derecha (Clínico)
         pdf.line(SECOND_COL_LEFT + col_total_w - 70, y_line, SECOND_COL_LEFT + col_total_w - 5, y_line)
-        pdf.set_xy(SECOND_COL_LEFT + 5, y_line + 1)
+        
         pdf.set_font("Arial", "B", 6.5)
+        # Texto Ingeniería centrado bajo su línea
+        pdf.set_xy(SECOND_COL_LEFT + 5, y_line + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL INGENIERÍA CLÍNICA", 0, 'C')
+        
+        # Texto Clínico centrado bajo su línea
         pdf.set_xy(SECOND_COL_LEFT + col_total_w - 70, y_line + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
 
