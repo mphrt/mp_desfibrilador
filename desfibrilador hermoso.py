@@ -197,19 +197,7 @@ def main():
     fecha = st.date_input("Fecha", value=datetime.date.today())
     ubicacion = st.text_input("Ubicación")
 
-    def checklist(title, items):
-        st.subheader(title)
-        respuestas = []
-        for item in items:
-            with st.container():
-                col1, col2 = st.columns([5, 3])
-                with col1:
-                    st.markdown(item)
-                with col2:
-                    seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
-            respuestas.append((item, seleccion))
-        return respuestas
-
+    # ... (Resto de la lógica de checklists y potencias igual) ...
     chequeo_visual = checklist("1. Inspección y limpieza", [
         "1.1. Inspección general", "1.2. Limpieza de contactos", "1.3. Limpieza de cabezal termo-inscriptor",
         "1.4. Revisión del estado de los accesorios", "1.5. Revisión del panel", "1.6. Revisión del conexiones eléctricas"
@@ -296,41 +284,30 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
-        # --- IDEQ arriba a la derecha ---
+        # --- IDEQ arriba a la derecha (SIN NEGRO) ---
         pdf.set_font("Arial", "B", 8)
         ideq_w = 30
         ideq_x = page_w - SIDE_MARGIN - ideq_w
         pdf.set_xy(ideq_x, 2)
-        pdf.cell(ideq_w, 5.0, f"IDEQ: {ideq}", border=1, ln=1, align="C", fill=True)
+        pdf.cell(ideq_w, 5.0, f"IDEQ: {ideq}", border=1, ln=1, align="C", fill=False)
 
-        # --- TÍTULO (A un lado del logo y arriba de la fecha) ---
+        # --- TÍTULO (AL LADO DEL LOGO Y ARRIBA DE LA FECHA) ---
         pdf.set_font("Arial", "B", 7)
         title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
         title_box_w = pdf.get_string_width(title_text) + 10
-        title_x = logo_x + LOGO_W_MM + 10 # Posicionado a la derecha del logo
-        title_y = 2 # Alineado al tope superior como el logo
+        title_x = logo_x + LOGO_W_MM + 5 
+        title_y = 6 # Bajado un poco para que no pegue al borde superior
         
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
-        pdf.cell(title_box_w, 5.0, title_text, border=1, ln=0, align="C", fill=True)
+        pdf.cell(title_box_w, 5.0, title_text, border=1, ln=1, align="C", fill=True)
 
-        # --- FECHA (Debajo del título) ---
-        date_col_w = 11.0
-        x_date = title_x + (title_box_w / 2) - ((date_col_w * 3 + 15) / 2) # Centrado bajo el título
-        y_date = title_y + 7
-        line_h = 4.4
-        
-        pdf.set_xy(x_date, y_date); pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(15, line_h, "FECHA:", 0, 0, "L")
-        pdf.set_font("Arial", "", 7.5)
-        pdf.cell(date_col_w, line_h, f"{fecha.day:02d}", 1, 0, "C")
-        pdf.cell(date_col_w, line_h, f"{fecha.month:02d}", 1, 0, "C")
-        pdf.cell(date_col_w, line_h, f"{fecha.year:04d}", 1, 0, "C")
-
-        content_y_base = max(logo_y + logo_h, y_date + line_h) + 3
+        # Base para el contenido
+        content_y_base = max(logo_y + logo_h, title_y + 10) + 3
         pdf.set_y(content_y_base)
 
-        # ======= CAMPOS IZQUIERDA =======
+        # ======= CAMPOS IZQUIERDA (MARCA, MODELO, ETC) =======
+        line_h = 4.4
         label_w_common = 28.0
         y_fields_start = pdf.get_y()
         x_label = FIRST_COL_LEFT + 2
@@ -349,6 +326,18 @@ def main():
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
         
+        # --- FECHA (POSICIÓN ORIGINAL: EXTREMO DERECHO DE LA PRIMERA COLUMNA) ---
+        date_col_w = 11.0
+        x_date = FIRST_TAB_RIGHT - (date_col_w * 3)
+        y_date_position = content_y_base # Donde solía estar
+        pdf.set_xy(x_date - 15, y_date_position); pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
+        pdf.set_font("Arial", "", 7.5)
+        pdf.set_xy(x_date, y_date_position)
+        pdf.cell(date_col_w, line_h, f"{fecha.day:02d}", 1, 0, "C")
+        pdf.cell(date_col_w, line_h, f"{fecha.month:02d}", 1, 0, "C")
+        pdf.cell(date_col_w, line_h, f"{fecha.year:04d}", 1, 0, "C")
+        
         pdf.set_y(y_fields_start + 2.6)
 
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, FIRST_COL_LEFT, ITEM_W, COL_W)
@@ -360,9 +349,9 @@ def main():
         pdf.cell(col_total_w, 4.0, "      4. Medición de potencias", border=1, ln=1, align="L", fill=True)
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y()+1, potencias_valores)
         
-        # --- 5. INSTRUMENTOS DE ANÁLISIS (En Negrita) ---
+        # --- 5. Instrumentos de análisis (Minúsculas + Negrita) ---
         pdf.set_x(FIRST_COL_LEFT); pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(col_total_w, 4.0, "      5. INSTRUMENTOS DE ANÁLISIS", border=1, ln=1, align="L", fill=True)
+        pdf.cell(col_total_w, 4.0, "      5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         draw_analisis_columns(pdf, FIRST_COL_LEFT, pdf.get_y()+1, col_total_w, st.session_state.analisis_equipos)
         
         # Columna Derecha
@@ -408,6 +397,19 @@ def main():
         else: out = bytes(out)
 
         st.download_button("Descargar PDF", out, file_name=f"{ideq}_MP_Desfibrilador_{sn}.pdf", mime="application/pdf")
+
+def checklist(title, items):
+    st.subheader(title)
+    respuestas = []
+    for item in items:
+        with st.container():
+            col1, col2 = st.columns([5, 3])
+            with col1:
+                st.markdown(item)
+            with col2:
+                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
+        respuestas.append((item, seleccion))
+    return respuestas
 
 if __name__ == "__main__":
     main()
