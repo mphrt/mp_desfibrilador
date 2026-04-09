@@ -14,7 +14,7 @@ FOOTER_LINES = [
     "HOSPITAL REGIONAL DE TALCA",
 ]
 
-# Listas base (Ordenadas alfabéticamente)
+# Listas base ordenadas alfabéticamente
 MARCAS_BASE = sorted(["NIHON KOHDEN", "ZOLL MEDICAL", "ADVANCED", "MINDRAY"])
 MODELOS_BASE = sorted([
     "TEC5521K", "M-SERIES", "PD-1400", "D-1000", "TEC7631G", 
@@ -32,16 +32,22 @@ class PDF(FPDF):
         if not self._footer_lines:
             return
         self.set_y(-15)
+        y = self.get_y()
         subtitle_fs = 6.2
         line_h = 3.4
-        self.set_font("Arial", "B", subtitle_fs)
         first_line = self._footer_lines[0]
+        self.set_font("Arial", "B", subtitle_fs)
         text_w = self.get_string_width(first_line)
-        self.line(self.l_margin, self.get_y(), self.l_margin + text_w, self.get_y())
+        x_left = self.l_margin
+        self.set_draw_color(0, 0, 0)
+        self.set_line_width(0.2)
+        self.line(x_left, y, x_left + text_w, y)
         self.ln(1.6)
+        self.set_x(self.l_margin)
         self.cell(0, line_h, first_line, ln=1, align="L")
         self.set_font("Arial", "", subtitle_fs)
         for line in self._footer_lines[1:]:
+            self.set_x(self.l_margin)
             self.cell(0, line_h, line, ln=1, align="L")
 
 # ========= Utilidades de Procesamiento =========
@@ -51,7 +57,8 @@ def _crop_signature(canvas_result):
     img_array = canvas_result.image_data.astype(np.uint8)
     img = Image.fromarray(img_array)
     gray_img = img.convert('L')
-    coords = np.argwhere(np.array(gray_img) < 230)
+    threshold = 230
+    coords = np.argwhere(np.array(gray_img) < threshold)
     if coords.size == 0:
         return None
     min_y, min_x = coords.min(axis=0)
@@ -64,98 +71,156 @@ def _crop_signature(canvas_result):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def add_signature_to_pdf(pdf_obj, canvas_result, x, y, w=40, h=15):
-    img_data = _crop_signature(canvas_result)
-    if img_data:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-            tmp.write(img_data.read())
-            pdf_obj.image(tmp.name, x=x, y=y, w=w, h=h)
+def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=15):
+    img_byte_arr = _crop_signature(canvas_result)
+    if not img_byte_arr:
+        return
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
+        tmp_file.write(img_byte_arr.read())
+        tmp_path = tmp_file.name
+    try:
+        img = Image.open(tmp_path)
+        img_w = w_mm
+        img_h = (img.height / img.width) * img_w
+        if img_h > h_mm:
+            img_h = h_mm
+            img_w = (img.width / img.height) * img_h
+        pdf_obj.image(tmp_path, x=x, y=y, w=img_w, h=img_h)
+    except Exception:
+        pass
 
-def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w):
-    row_h = 4
-    pdf.set_fill_color(230, 230, 230)
-    pdf.set_font("Arial", "B", 7)
+# ========= Funciones de Dibujo PDF =========
+def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=3.4):
     pdf.set_x(x_pos)
-    pdf.cell(item_w, row_h, section_title, border=1, fill=True)
-    for h in ["OK", "NO", "N/A"]:
-        pdf.cell(col_w, row_h, h, border=1, align="C", fill=True)
-    pdf.ln()
-    pdf.set_font("Arial", "", 6.5)
-    for item, val in items:
+    pdf.set_fill_color(230, 230, 230)
+    pdf.set_font("Arial", "B", 7.2)
+    pdf.cell(item_w, row_h, f"  {section_title}", border=1, ln=0, fill=True)
+    pdf.cell(col_w, row_h, "OK", border=1, ln=0, align="C", fill=True)
+    pdf.cell(col_w, row_h, "NO", border=1, ln=0, align="C", fill=True)
+    pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
+    pdf.set_font("Arial", "", 6.2)
+    for item, value in items:
         pdf.set_x(x_pos)
-        pdf.cell(item_w, row_h, item, border=1)
-        for h in ["OK", "NO", "N/A"]:
-            mark = "X" if val == h else ""
-            pdf.cell(col_w, row_h, mark, border=1, align="C")
-        pdf.ln()
+        pdf.cell(item_w, row_h, f"   {item}", border=1, ln=0)
+        pdf.cell(col_w, row_h, "X" if value == "OK" else "", border=1, ln=0, align="C")
+        pdf.cell(col_w, row_h, "X" if value == "NO" else "", border=1, ln=0, align="C")
+        pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
+    pdf.ln(1.5)
 
-def checklist(title, items):
+def checklist_ui(title, items):
     st.subheader(title)
     respuestas = []
     for item in items:
         col1, col2 = st.columns([5, 3])
         with col1: st.write(item)
-        with col2: sel = st.radio("Acción", ["OK", "NO", "N/A"], horizontal=True, key=item, label_visibility="collapsed")
+        with col2: sel = st.radio("Respuesta", ["OK", "NO", "N/A"], horizontal=True, key=item, label_visibility="collapsed")
         respuestas.append((item, sel))
     return respuestas
 
 # ========= App Principal =========
 def main():
-    st.title("Pauta de Mantenimiento Preventivo")
+    st.title("Pauta de Mantenimiento Preventivo - Monitor/Desfibrilador")
 
-    # Datos
-    ideq = st.text_input("IDEQ")
-    m_list = [""] + MARCAS_BASE + ["+ Añadir nueva marca..."]
-    marca_sel = st.selectbox("Marca", m_list)
-    marca = st.text_input("Escribe la marca") if marca_sel == "+ Añadir nueva marca..." else marca_sel
-    
-    mod_list = [""] + MODELOS_BASE + ["+ Añadir nuevo modelo..."]
-    modelo_sel = st.selectbox("Modelo", mod_list)
-    modelo = st.text_input("Escribe el modelo") if modelo_sel == "+ Añadir nuevo modelo..." else modelo_sel
-    
-    sn = st.text_input("Número de Serie")
-    fecha = st.date_input("Fecha", value=datetime.date.today())
+    # --- DATOS DEL EQUIPO (ORDEN ANTIGUO) ---
+    col_a, col_b = st.columns(2)
+    with col_a:
+        ideq = st.text_input("IDEQ")
+        
+        m_list = [""] + MARCAS_BASE + ["+ Añadir nueva marca..."]
+        marca_sel = st.selectbox("Marca", m_list)
+        marca = st.text_input("Escribe el nombre de la nueva marca") if marca_sel == "+ Añadir nueva marca..." else marca_sel
 
-    # Checklists
-    c1 = checklist("1. Inspección y limpieza", ["1.1 Inspección general", "1.2 Limpieza contactos", "1.3 Limpieza cabezal"])
-    c2 = checklist("2. Seguridad eléctrica", ["2.1 Corrientes fuga normal", "2.2 Neutro abierto"])
+        mod_list = [""] + MODELOS_BASE + ["+ Añadir nuevo modelo..."]
+        modelo_sel = st.selectbox("Modelo", mod_list)
+        modelo = st.text_input("Escribe el nombre del nuevo modelo") if modelo_sel == "+ Añadir nuevo modelo..." else modelo_sel
 
-    # Firmas
+    with col_b:
+        sn = st.text_input("Número de Serie")
+        inventario = st.text_input("Número de Inventario")
+        fecha = st.date_input("Fecha", value=datetime.date.today())
+        ubicacion = st.text_input("Ubicación")
+
+    # --- LISTAS DE CHEQUEO ---
+    c1 = checklist_ui("1. Inspección y limpieza", ["1.1. Inspección general", "1.2. Limpieza de contactos", "1.3. Limpieza cabezal termo-inscriptor", "1.4. Revisión accesorios", "1.5. Revisión panel", "1.6. Conexiones eléctricas"])
+    c2 = checklist_ui("2. Seguridad eléctrica", ["2.1. Medición corrientes fuga normal", "2.2. Medición corrientes fuga neutro abierto"])
+    c3 = checklist_ui("3. Accesorios del equipo", ["3.1. Cable de poder", "3.2. Cable paciente", "3.3. Cable de interfaz", "3.4. Cable tierra", "3.5. Palas desfibriladoras"])
+
+    # --- OBSERVACIONES Y OPERATIVIDAD ---
+    st.subheader("Finalización")
+    obs = st.text_area("Observaciones")
+    operativo = st.radio("¿EQUIPO OPERATIVO?", ["SI", "NO"], horizontal=True)
+    tecnico = st.text_input("NOMBRE TÉCNICO/INGENIERO")
+    empresa = st.text_input("EMPRESA RESPONSABLE")
+
+    # --- FIRMAS ---
     st.subheader("Firmas")
-    col_t, col_i = st.columns(2)
-    with col_t:
-        st.write("Técnico:")
-        can_t = st_canvas(stroke_width=2, stroke_color="#000", background_color="#EEE", height=100, width=200, key="ct")
-    with col_i:
-        st.write("Ingeniería:")
-        can_i = st_canvas(stroke_width=2, stroke_color="#000", background_color="#EEE", height=100, width=200, key="ci")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        st.write("Firma Técnico Encargado:")
+        canvas_t = st_canvas(stroke_width=2, stroke_color="#000", background_color="#EEE", height=120, width=300, key="c_tec")
+    with col_f2:
+        st.write("Firma Ingeniería Clínica / Personal:")
+        canvas_i = st_canvas(stroke_width=2, stroke_color="#000", background_color="#EEE", height=120, width=300, key="c_ing")
 
+    # --- GENERACIÓN PDF ---
     if st.button("Generar PDF"):
-        pdf = PDF('P', 'mm', 'A4', footer_lines=FOOTER_LINES)
+        pdf = PDF('L', 'mm', 'A4', footer_lines=FOOTER_LINES)
+        pdf.set_margins(10, 10, 10)
         pdf.add_page()
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "INFORME DE MANTENIMIENTO", ln=1, align="C")
         
-        pdf.set_font("Arial", "", 9)
-        pdf.cell(0, 7, f"IDEQ: {ideq} | MARCA: {marca} | MODELO: {modelo}", ln=1)
-        pdf.cell(0, 7, f"S/N: {sn} | FECHA: {fecha}", ln=1)
-        pdf.ln(5)
+        # Encabezado
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 8, "PAUTA DE MANTENIMIENTO PREVENTIVO - MONITOR/DESFIBRILADOR", ln=1, align="C")
+        pdf.ln(2)
 
-        # Tablas
-        create_checkbox_table(pdf, "1. Inspección", c1, 10, 80, 15)
-        pdf.ln(5)
-        create_checkbox_table(pdf, "2. Seguridad", c2, 10, 80, 15)
+        # Bloque de Datos (Dos columnas en el PDF)
+        pdf.set_font("Arial", "B", 8)
+        # Columna 1
+        pdf.text(10, 25, f"IDEQ: {ideq}")
+        pdf.text(10, 30, f"MARCA: {marca}")
+        pdf.text(10, 35, f"MODELO: {modelo}")
+        # Columna 2
+        pdf.text(110, 25, f"N° SERIE: {sn}")
+        pdf.text(110, 30, f"FECHA: {fecha}")
+        pdf.text(110, 35, f"UBICACIÓN: {ubicacion}")
+        pdf.ln(18)
+
+        # Tablas (Lado izquierdo)
+        col_width_items = 80
+        col_width_chk = 12
         
-        # Dibujar firmas
-        curr_y = pdf.get_y() + 10
-        pdf.text(10, curr_y, "Firma Técnico:")
-        pdf.text(110, curr_y, "Firma Ingeniería:")
-        add_signature_to_pdf(pdf, can_t, 10, curr_y + 2)
-        add_signature_to_pdf(pdf, can_i, 110, curr_y + 2)
+        create_checkbox_table(pdf, "1. INSPECCIÓN Y LIMPIEZA", c1, 10, col_width_items, col_width_chk)
+        create_checkbox_table(pdf, "2. SEGURIDAD ELÉCTRICA", c2, 10, col_width_items, col_width_chk)
+        create_checkbox_table(pdf, "3. ACCESORIOS DEL EQUIPO", c3, 10, col_width_items, col_width_chk)
 
-        # Output
+        # Observaciones y Firmas (Lado derecho / abajo)
+        pdf.set_xy(130, 45)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 5, "OBSERVACIONES:", ln=1)
+        pdf.set_x(130)
+        pdf.set_font("Arial", "", 8)
+        pdf.multi_cell(0, 4, obs if obs else "Sin observaciones.")
+        
+        pdf.ln(5)
+        pdf.set_x(130)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 5, f"EQUIPO OPERATIVO: {operativo}", ln=1)
+        pdf.set_x(130)
+        pdf.cell(0, 5, f"TÉCNICO: {tecnico}", ln=1)
+        pdf.set_x(130)
+        pdf.cell(0, 5, f"EMPRESA: {empresa}", ln=1)
+
+        # Espacio para firmas
+        y_firma = pdf.get_y() + 5
+        pdf.text(130, y_firma, "Firma Técnico:")
+        add_signature_inline(pdf, canvas_t, 130, y_firma + 2, 50, 20)
+        
+        pdf.text(210, y_firma, "Firma Receptor:")
+        add_signature_inline(pdf, canvas_i, 210, y_firma + 2, 50, 20)
+
+        # Salida
         pdf_bytes = pdf.output(dest='S').encode('latin1')
-        st.download_button("Descargar PDF", pdf_bytes, file_name=f"MP_{ideq}.pdf", mime="application/pdf")
+        st.download_button("Descargar Reporte PDF", pdf_bytes, file_name=f"MP_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
