@@ -214,23 +214,23 @@ def main():
     ideq = st.text_input("IDEQ")
     
     # --- MARCA ---
-    marca_sel = st.selectbox("Marca", MARCAS_BASE + ["+ Añadir nueva marca..."], index=0)
+    marca_sel = st.selectbox("MARCA", MARCAS_BASE + ["+ Añadir nueva marca..."], index=0)
     if marca_sel == "+ Añadir nueva marca...":
         marca = st.text_input("Escribe el nombre de la nueva marca", key="input_marca_custom")
     else:
         marca = marca_sel
 
     # --- MODELO ---
-    modelo_sel = st.selectbox("Modelo", MODELOS_BASE + ["+ Añadir nuevo modelo..."], index=0)
+    modelo_sel = st.selectbox("MODELO", MODELOS_BASE + ["+ Añadir nuevo modelo..."], index=0)
     if modelo_sel == "+ Añadir nuevo modelo...":
         modelo = st.text_input("Escribe el nombre del nuevo modelo", key="input_modelo_custom")
     else:
         modelo = modelo_sel
 
-    sn = st.text_input("Número de Serie")
-    inventario = st.text_input("Número de Inventario")
-    fecha = st.date_input("Fecha", value=datetime.date.today())
-    ubicacion = st.text_input("Ubicación")
+    sn = st.text_input("NÚMERO DE SERIE")
+    inventario = st.text_input("NÚMERO DE INVENTARIO")
+    fecha = st.date_input("FECHA", value=datetime.date.today())
+    ubicacion = st.text_input("UBICACIÓN")
 
     # --- LISTAS DE CHEQUEO ---
     chequeo_visual = checklist("1. Inspección y limpieza", [
