@@ -14,9 +14,13 @@ FOOTER_LINES = [
     "HOSPITAL REGIONAL DE TALCA",
 ]
 
-# Lista de modelos solicitada
+# Listas de opciones (Comienzan con "" para que el recuadro esté vacío)
+LISTA_MARCAS = [
+    "", "NIHON KOHDEN", "ZOLL MEDICAL", "ADVANCED", "MINDRAY", "Otro (Escribir manualmente)"
+]
+
 LISTA_MODELOS = [
-    "TEC5521K", "M-SERIES", "PD-1400", "D-1000", "TEC7631G", 
+    "", "TEC5521K", "M-SERIES", "PD-1400", "D-1000", "TEC7631G", 
     "CARDIOLIFE", "BENEHEART D3", "TEC-5531E", "CU-HD1", 
     "TEC-5631E", "TEC3521K", "R-SERIES", "C1A", 
     "Otro (Escribir manualmente)"
@@ -228,9 +232,15 @@ def main():
 
     # Datos del Equipo
     ideq = st.text_input("IDEQ")
-    marca = st.text_input("Marca")
     
-    # MODIFICACIÓN: Menú desplegable para Modelo
+    # Campo Marca con opción de escribir manualmente
+    marca_sel = st.selectbox("Marca", LISTA_MARCAS)
+    if marca_sel == "Otro (Escribir manualmente)":
+        marca = st.text_input("Especifique la marca manualmente")
+    else:
+        marca = marca_sel
+    
+    # Campo Modelo con opción de escribir manualmente
     modelo_sel = st.selectbox("Modelo", LISTA_MODELOS)
     if modelo_sel == "Otro (Escribir manualmente)":
         modelo = st.text_input("Especifique el modelo manualmente")
@@ -365,7 +375,7 @@ def main():
             y_fields_start += line_h
         
         left_field("MARCA", marca)
-        left_field("MODELO", modelo) # Aquí se imprime el modelo seleccionado o escrito
+        left_field("MODELO", modelo)
         left_field("NÚMERO SERIE", sn)
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
