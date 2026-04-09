@@ -7,13 +7,22 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-# ========= Pie de página =========
+# ========= Configuración y Constantes =========
 FOOTER_LINES = [
     "PAUTA MANTENIMIENTO PREVENTIVO MONITOR/DESFIBRILADOR (Ver 2)",
     "UNIDAD DE INGENIERÍA CLÍNICA",
     "HOSPITAL REGIONAL DE TALCA",
 ]
 
+# Lista de modelos solicitada
+LISTA_MODELOS = [
+    "TEC5521K", "M-SERIES", "PD-1400", "D-1000", "TEC7631G", 
+    "CARDIOLIFE", "BENEHEART D3", "TEC-5531E", "CU-HD1", 
+    "TEC-5631E", "TEC3521K", "R-SERIES", "C1A", 
+    "Otro (Escribir manualmente)"
+]
+
+# ========= Clase PDF =========
 class PDF(FPDF):
     def __init__(self, *args, footer_lines=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,7 +50,7 @@ class PDF(FPDF):
             self.set_x(self.l_margin)
             self.cell(0, line_h, line, ln=1, align="L")
 
-# ========= utilidades =========
+# ========= Utilidades =========
 def _crop_signature(canvas_result):
     if canvas_result.image_data is None:
         return None
@@ -63,7 +72,6 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_centered(pdf_obj, canvas_result, line_x_start, line_w, y_top, max_w=50, max_h=15):
-    """Añade la firma centrada respecto a una línea de referencia"""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -72,17 +80,13 @@ def add_signature_centered(pdf_obj, canvas_result, line_x_start, line_w, y_top, 
         tmp_path = tmp_file.name
     try:
         img = Image.open(tmp_path)
-        # Calcular proporciones
         img_w = max_w
         img_h = (img.height / img.width) * img_w
         if img_h > max_h:
             img_h = max_h
             img_w = (img.width / img.height) * img_h
-        
-        # Calcular X para que el centro de img_w coincida con el centro de line_w
         center_x = line_x_start + (line_w / 2)
         final_x = center_x - (img_w / 2)
-        
         pdf_obj.image(tmp_path, x=final_x, y=y_top, w=img_w, h=img_h)
     except Exception as e:
         st.error(f"Error al añadir imagen: {e}")
@@ -102,7 +106,7 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=15):
             img_h = h_mm
             img_w = (img.width / img.height) * img_h
         pdf_obj.image(tmp_path, x=x, y=y, w=img_w, h=img_h)
-    except Exception as e:
+    except Exception:
         pass
 
 def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w=36):
@@ -118,9 +122,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
     pdf.set_xy(x_box_no, y); pdf.cell(size, size, "X" if selected == "NO" else "", 0, 0, "C")
     pdf.set_xy(x_box_no + size + text_gap, y); pdf.cell(6, size, "NO", 0, 1)
 
-def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
-                          row_h=3.4, head_fs=7.2, cell_fs=6.2,
-                          indent_w=5.0, title_tab_spaces=2):
+def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=3.4, head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2):
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -140,9 +142,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.6)
 
-def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
-                          head_h=4.6, fs_head=7.2, fs_body=7.0,
-                          body_line_h=3.2, padding=1.2):
+def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text, head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2):
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs_head)
@@ -222,18 +222,27 @@ def checklist(title, items):
         respuestas.append((item, seleccion))
     return respuestas
 
-# ========= app =========
+# ========= App Principal =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Monitor/Desfibrilador")
 
+    # Datos del Equipo
     ideq = st.text_input("IDEQ")
     marca = st.text_input("Marca")
-    modelo = st.text_input("Modelo")
+    
+    # MODIFICACIÓN: Menú desplegable para Modelo
+    modelo_sel = st.selectbox("Modelo", LISTA_MODELOS)
+    if modelo_sel == "Otro (Escribir manualmente)":
+        modelo = st.text_input("Especifique el modelo manualmente")
+    else:
+        modelo = modelo_sel
+
     sn = st.text_input("Número de Serie")
     inventario = st.text_input("Número de Inventario")
     fecha = st.date_input("Fecha", value=datetime.date.today())
     ubicacion = st.text_input("Ubicación")
 
+    # Listas de chequeo
     chequeo_visual = checklist("1. Inspección y limpieza", [
         "1.1. Inspección general", "1.2. Limpieza de contactos", "1.3. Limpieza de cabezal termo-inscriptor",
         "1.4. Revisión del estado de los accesorios", "1.5. Revisión del panel", "1.6. Revisión del conexiones eléctricas"
@@ -262,7 +271,7 @@ def main():
         with col_eq:
             st.session_state.analisis_equipos[i]['equipo'] = st.text_input("EQUIPO", value=st.session_state.analisis_equipos[i].get('equipo', ''), key=f"equipo_{i}")
             st.session_state.analisis_equipos[i]['marca'] = st.text_input("MARCA", value=st.session_state.analisis_equipos[i].get('marca', ''), key=f"marca_{i}")
-            st.session_state.analisis_equipos[i]['modelo'] = st.text_input("MODELO", value=st.session_state.analisis_equipos[i].get('modelo', ''), key=f"modelo_{i}")
+            st.session_state.analisis_equipos[i]['modelo'] = st.text_input("MODELO", value=st.session_state.analisis_equipos[i].get('modelo', ''), key=f"modelo_an_{i}")
             st.session_state.analisis_equipos[i]['serie'] = st.text_input("NÚMERO SERIE", value=st.session_state.analisis_equipos[i].get('serie', ''), key=f"serie_{i}")
         if i > 0:
             with col_btn:
@@ -308,7 +317,7 @@ def main():
         FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
-        # ======= ENCABEZADO SUPERIOR =======
+        # LOGO
         logo_x, logo_y = SIDE_MARGIN, 2
         LOGO_W_MM = 60
         try:
@@ -319,7 +328,7 @@ def main():
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
-        # IDEQ Recuadro pequeño
+        # IDEQ
         pdf.set_font("Arial", "B", 8)
         ideq_text = f"IDEQ: {ideq}"
         ideq_w = pdf.get_string_width(ideq_text) + 4
@@ -328,7 +337,7 @@ def main():
         pdf.set_xy(ideq_x, 4)
         pdf.cell(ideq_w, 4.5, ideq_text, border=1, ln=1, align="C", fill=True)
 
-        # Pauta Mantenimiento
+        # TÍTULO
         pdf.set_font("Arial", "B", 7)
         title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
         title_x = logo_x + LOGO_W_MM + 4
@@ -341,7 +350,7 @@ def main():
         content_y_base = max(logo_y + logo_h, title_y + 5) + 4
         pdf.set_y(content_y_base)
 
-        # ======= CAMPOS IZQUIERDA =======
+        # CAMPOS IZQUIERDA
         line_h = 4.4
         label_w_common = 28.0
         y_fields_start = pdf.get_y()
@@ -356,7 +365,7 @@ def main():
             y_fields_start += line_h
         
         left_field("MARCA", marca)
-        left_field("MODELO", modelo)
+        left_field("MODELO", modelo) # Aquí se imprime el modelo seleccionado o escrito
         left_field("NÚMERO SERIE", sn)
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
@@ -374,6 +383,7 @@ def main():
         
         pdf.set_y(y_fields_start + 2.6)
 
+        # TABLAS DE CHEQUEO
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, FIRST_COL_LEFT, ITEM_W, COL_W)
         create_checkbox_table(pdf, "2. Seguridad eléctrica", seguridad_electrica, FIRST_COL_LEFT, ITEM_W, COL_W)
         create_checkbox_table(pdf, "3. Accesorios del equipo", accesorios_equipo, FIRST_COL_LEFT, ITEM_W, COL_W)
@@ -386,7 +396,7 @@ def main():
         pdf.cell(col_total_w, 4.0, "      5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         draw_analisis_columns(pdf, FIRST_COL_LEFT, pdf.get_y()+1, col_total_w, st.session_state.analisis_equipos)
         
-        # ======= SECCIÓN DERECHA =======
+        # COLUMNA DERECHA
         pdf.set_y(content_y_base)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 15, "   Observaciones", observaciones)
         pdf.ln(2)
@@ -409,24 +419,19 @@ def main():
         pdf.ln(2)
         draw_boxed_text_auto(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, 15, "   Observaciones (uso interno)", observaciones_interno)
         
-        # ======= FIRMAS RECEPCIÓN CONFORME (CENTRADAS) =======
+        # FIRMAS RECEPCIÓN
         y_sig_top = pdf.get_y() + 5
-        line_w_ref = 50  # Longitud de la línea
-        
-        # Posiciones X de inicio de las líneas
+        line_w_ref = 50 
         x_start_ingenieria = SECOND_COL_LEFT + 12
         x_start_clinico = SECOND_COL_LEFT + col_total_w - 62
         
-        # 1. Insertar Imágenes centradas respecto a las líneas
         add_signature_centered(pdf, canvas_result_ingenieria, x_start_ingenieria, line_w_ref, y_sig_top)
         add_signature_centered(pdf, canvas_result_clinico, x_start_clinico, line_w_ref, y_sig_top)
         
-        # 2. Dibujar Líneas
         y_line_final = y_sig_top + 18
         pdf.line(x_start_ingenieria, y_line_final, x_start_ingenieria + line_w_ref, y_line_final)
         pdf.line(x_start_clinico, y_line_final, x_start_clinico + line_w_ref, y_line_final)
         
-        # 3. Textos centrados
         pdf.set_font("Arial", "B", 6.5)
         pdf.set_xy(SECOND_COL_LEFT + 5, y_line_final + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL INGENIERÍA CLÍNICA", 0, 'C')
@@ -434,6 +439,7 @@ def main():
         pdf.set_xy(SECOND_COL_LEFT + col_total_w - 70, y_line_final + 1)
         pdf.multi_cell(65, 3.5, "RECEPCIÓN CONFORME\nPERSONAL CLÍNICO", 0, 'C')
 
+        # SALIDA
         out = pdf.output(dest="S")
         if isinstance(out, str): out = out.encode("latin1")
         else: out = bytes(out)
