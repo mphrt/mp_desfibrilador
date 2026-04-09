@@ -292,7 +292,7 @@ def main():
         x_date = FIRST_TAB_RIGHT - 33.0
         pdf.set_xy(x_date - 15, content_y_left)
         pdf.set_font("Arial", "B", 7.5); pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
-        pdf.set_font("Arial", "", 7.5); pdf.set_xy(x_date, content_y_left)
+        pdf.set_font("Arial", " ", 7.5); pdf.set_xy(x_date, content_y_left)
         pdf.cell(11, line_h, f"{fecha.day:02d}", 1, 0, "C")
         pdf.cell(11, line_h, f"{fecha.month:02d}", 1, 0, "C")
         pdf.cell(11, line_h, f"{fecha.year:04d}", 1, 1, "C")
@@ -365,8 +365,12 @@ def main():
         add_signature_inline(pdf, canvas_result_clinico, x_start_sigs + line_w + gap_sigs + (line_w/2), y_sigs - 2, 35, 15, centered=True)
 
         out = pdf.output(dest="S")
-        # FORMATO DE NOMBRE IGUAL AL SEGUNDO CODIGO
-        final_filename = f"{ideq}_MP_Monitor_{sn}.pdf" if ideq else f"MP_Monitor_{sn}.pdf"
+        
+        # ========= MODIFICACIÓN DE NOMBRE DE ARCHIVO =========
+        # Se cambia de Monitor a Desfibrilador
+        final_filename = f"{ideq}_MP_Desfibrilador_{sn}.pdf" if ideq else f"MP_Desfibrilador_{sn}.pdf"
+        # =====================================================
+        
         st.download_button("Descargar PDF", bytes(out), file_name=final_filename, mime="application/pdf")
 
 if __name__ == "__main__":
