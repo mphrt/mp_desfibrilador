@@ -14,17 +14,16 @@ FOOTER_LINES = [
     "HOSPITAL REGIONAL DE TALCA",
 ]
 
-# Listas de opciones (Comienzan con "" para que el recuadro esté vacío)
-LISTA_MARCAS = [
-    "", "NIHON KOHDEN", "ZOLL MEDICAL", "ADVANCED", "MINDRAY", "Otro (Escribir manualmente)"
-]
+# Inicializar estados de sesión para listas dinámicas si no existen
+if 'marcas_personalizadas' not in st.session_state:
+    st.session_state.marcas_personalizadas = ["", "NIHON KOHDEN", "ZOLL MEDICAL", "ADVANCED", "MINDRAY"]
 
-LISTA_MODELOS = [
-    "", "TEC5521K", "M-SERIES", "PD-1400", "D-1000", "TEC7631G", 
-    "CARDIOLIFE", "BENEHEART D3", "TEC-5531E", "CU-HD1", 
-    "TEC-5631E", "TEC3521K", "R-SERIES", "C1A", 
-    "Otro (Escribir manualmente)"
-]
+if 'modelos_personalizados' not in st.session_state:
+    st.session_state.modelos_personalizados = [
+        "", "TEC5521K", "M-SERIES", "PD-1400", "D-1000", "TEC7631G", 
+        "CARDIOLIFE", "BENEHEART D3", "TEC-5531E", "CU-HD1", 
+        "TEC-5631E", "TEC3521K", "R-SERIES", "C1A"
+    ]
 
 # ========= Clase PDF =========
 class PDF(FPDF):
@@ -233,17 +232,31 @@ def main():
     # Datos del Equipo
     ideq = st.text_input("IDEQ")
     
-    # Campo Marca con opción de escribir manualmente
-    marca_sel = st.selectbox("Marca", LISTA_MARCAS)
-    if marca_sel == "Otro (Escribir manualmente)":
-        marca = st.text_input("Especifique la marca manualmente")
+    # --- Lógica de MARCA DINÁMICA ---
+    opciones_marca = st.session_state.marcas_personalizadas + ["+ Añadir nueva marca..."]
+    marca_sel = st.selectbox("Marca", opciones_marca, index=0)
+    
+    if marca_sel == "+ Añadir nueva marca...":
+        nueva_marca = st.text_input("Escribe el nombre de la nueva marca")
+        if st.button("Guardar Marca"):
+            if nueva_marca and nueva_marca not in st.session_state.marcas_personalizadas:
+                st.session_state.marcas_personalizadas.append(nueva_marca)
+                st.rerun()
+        marca = nueva_marca
     else:
         marca = marca_sel
+
+    # --- Lógica de MODELO DINÁMICO ---
+    opciones_modelo = st.session_state.modelos_personalizados + ["+ Añadir nuevo modelo..."]
+    modelo_sel = st.selectbox("Modelo", opciones_modelo, index=0)
     
-    # Campo Modelo con opción de escribir manualmente
-    modelo_sel = st.selectbox("Modelo", LISTA_MODELOS)
-    if modelo_sel == "Otro (Escribir manualmente)":
-        modelo = st.text_input("Especifique el modelo manualmente")
+    if modelo_sel == "+ Añadir nuevo modelo...":
+        nuevo_modelo = st.text_input("Escribe el nombre del nuevo modelo")
+        if st.button("Guardar Modelo"):
+            if nuevo_modelo and nuevo_modelo not in st.session_state.modelos_personalizados:
+                st.session_state.modelos_personalizados.append(nuevo_modelo)
+                st.rerun()
+        modelo = nuevo_modelo
     else:
         modelo = modelo_sel
 
