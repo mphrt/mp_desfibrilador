@@ -292,7 +292,8 @@ def main():
         x_date = FIRST_TAB_RIGHT - 33.0
         pdf.set_xy(x_date - 15, content_y_left)
         pdf.set_font("Arial", "B", 7.5); pdf.cell(13, line_h, "FECHA:", 0, 0, "R")
-        pdf.set_font("Arial", " ", 7.5); pdf.set_xy(x_date, content_y_left)
+        # CORRECCIÓN AQUÍ: Se cambia " " por "" para indicar estilo normal (Regular)
+        pdf.set_font("Arial", "", 7.5); pdf.set_xy(x_date, content_y_left)
         pdf.cell(11, line_h, f"{fecha.day:02d}", 1, 0, "C")
         pdf.cell(11, line_h, f"{fecha.month:02d}", 1, 0, "C")
         pdf.cell(11, line_h, f"{fecha.year:04d}", 1, 1, "C")
@@ -367,7 +368,6 @@ def main():
         out = pdf.output(dest="S")
         
         # ========= MODIFICACIÓN DE NOMBRE DE ARCHIVO =========
-        # Se cambia de Monitor a Desfibrilador
         final_filename = f"{ideq}_MP_Desfibrilador_{sn}.pdf" if ideq else f"MP_Desfibrilador_{sn}.pdf"
         # =====================================================
         
